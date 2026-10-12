@@ -1,0 +1,53 @@
+name: Restore Original Sports Interactive Lesson
+on:
+  push:
+    paths:
+      - .github/workflows/restore-sports-lesson.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Extract interactive sports lesson from original file
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from html import unescape
+          import subprocess,re
+          p=Path('reading-sports.html')
+          history=subprocess.check_output(['git','log','--format=%H','--','reading-sports.html'], text=True).splitlines()
+          found=None
+          for rev in reversed(history):
+              old=subprocess.check_output(['git','show',rev+':reading-sports.html']).decode('utf-8')
+              match=re.search(r'<iframe\b[^>]*\bsrcdoc="(.*?)"\s+style="width:100%;height:100%;border:0"></iframe>',old,re.I|re.S)
+              if match:
+                  found=unescape(match.group(1))
+                  break
+          if not found:
+              raise RuntimeError('Original Sports lesson iframe missing - no update performed')
+          assert found.lower().startswith('<!doctype html>')
+          assert 'EVERY SECOND COUNTS' in found
+          assert 'READING INSIGHTS' in found
+          assert 'VOCABULARY WORKOUT' in found
+          assert 'CLOZE' in found.upper()
+          assert len(found)>70000
+          nav='<nav class="ecpe-sports-nav"><a href="vocabulary.html">← Back to Episodes</a><strong>READING &amp; VOCABULARY · The One Where Every Second Counts</strong></nav>'
+          css='''<style id="ecpe-sports-native-layout">html,body{width:100%;max-width:none;margin:0;overflow-x:hidden}body{min-height:100vh}.ecpe-sports-nav{position:sticky;top:0;z-index:999;display:flex;align-items:center;flex-wrap:wrap;gap:18px;justify-content:space-between;padding:14px clamp(18px,4vw,70px);background:#0b0b11;color:#fff;font:700 13px Arial,sans-serif}.ecpe-sports-nav a{color:#fff;text-decoration:none;border:1px solid #ffffff88;border-radius:99px;padding:12px 17px}.ecpe-sports-nav a:hover{background:#f50883;border-color:#f50883}@media(min-width:1000px){body>main,body>.container,body>.wrapper{width:100%!important;max-width:none!important}}</style>'''
+          found=found.replace('</head>',css+'</head>',1)
+          found=re.sub(r'<body([^>]*)>',lambda m:'<body'+m.group(1)+'>'+nav,found,count=1,flags=re.I)
+          p.write_text(found,encoding='utf-8')
+          print('Restored actual sports lesson:',len(found),'characters')
+          PY
+      - name: Commit restored Sports
+        run: |
+          if git diff --quiet -- reading-sports.html; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reading-sports.html
+          git commit -m "Restore original interactive Sports page without hidden iframe"
+          git push
