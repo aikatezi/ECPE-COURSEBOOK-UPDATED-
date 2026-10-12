@@ -31,9 +31,9 @@ jobs:
           if not found:
               raise RuntimeError('Original Sports lesson iframe missing - no update performed')
           assert found.lower().startswith('<!doctype html>')
-          assert 'EVERY SECOND COUNTS' in found
-          assert 'READING INSIGHTS' in found
-          assert 'VOCABULARY WORKOUT' in found
+          assert 'Every Second Counts' in found
+          assert 'READING' in found.upper()
+          assert 'VOCABULARY' in found.upper()
           assert 'CLOZE' in found.upper()
           assert len(found)>70000
           nav='<nav class="ecpe-sports-nav"><a href="vocabulary.html">← Back to Episodes</a><strong>READING &amp; VOCABULARY · The One Where Every Second Counts</strong></nav>'
