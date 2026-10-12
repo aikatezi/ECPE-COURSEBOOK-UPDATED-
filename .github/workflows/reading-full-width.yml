@@ -1,0 +1,33 @@
+name: Fix Full Width Human Nature
+on:
+  push:
+    paths:
+      - .github/workflows/reading-full-width.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply one stylesheet link to original large reading page
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('reading-human-nature.html')
+          html=p.read_text(encoding='utf-8')
+          link='<link rel="stylesheet" href="full-width-reading.css">'
+          if link not in html:
+              assert '</head>' in html
+              html=html.replace('</head>',link+'</head>',1)
+              p.write_text(html,encoding='utf-8')
+          PY
+      - name: Commit fixed layout
+        run: |
+          if git diff --quiet -- reading-human-nature.html; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reading-human-nature.html
+          git commit -m "Apply full width layout to Human Nature Reading"
+          git push
